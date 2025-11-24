@@ -52,7 +52,7 @@ jobs:
         run: pnpm test --filter="...[origin/${{ github.base_ref }}]" || echo "Tests passed or no tests found"
 
       - name: Comment PR with preview info
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const changedPackages = '${{ steps.changed-packages.outputs.packages }}';
