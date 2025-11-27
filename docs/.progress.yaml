@@ -1,12 +1,89 @@
 # FlashFusion SoT Documentation Progress Tracker
-# Last updated: 2025-11-01
+# Last updated: 2025-11-27
 # Format: YAML
 
 current:
   chunk: 1
-  phase: "1.1"
-  task: "completed"
+  phase: "1.3"
+  task: "mvp_roadmap"
   status: "completed"
+
+# MVP Roadmap Tracking (added 2025-11-27)
+mvp_roadmap:
+  version: "1.0.0"
+  created: "2025-11-27"
+  owner: "Kyler Rosebrook"
+  phases:
+    phase_1:
+      name: "Core Platform Foundation"
+      timeline: "Weeks 1-4"
+      status: "in_progress"
+      prd: "docs/planning/prd/PRD-001-CORE-PLATFORM.md"
+      completion: 60
+      deliverables:
+        - { name: "Monorepo structure", status: "complete" }
+        - { name: "Shared logging package", status: "complete" }
+        - { name: "Agent contracts schema", status: "complete" }
+        - { name: "OpenTelemetry integration", status: "complete" }
+        - { name: "CI/CD pipeline", status: "complete" }
+        - { name: "Security scanning", status: "complete" }
+        - { name: "Authentication service", status: "planned" }
+        - { name: "RBAC authorization", status: "planned" }
+        - { name: "Development environment", status: "planned" }
+        - { name: "Staging environment", status: "planned" }
+    phase_2:
+      name: "Agent Infrastructure"
+      timeline: "Weeks 5-8"
+      status: "planned"
+      prd: "docs/planning/prd/PRD-002-AGENT-INFRASTRUCTURE.md"
+      completion: 0
+      deliverables:
+        - { name: "Agent Registry Service", status: "planned" }
+        - { name: "Context Store (Redis)", status: "planned" }
+        - { name: "Agent SDK", status: "planned" }
+        - { name: "Orchestrator Agent", status: "planned" }
+        - { name: "Safety Evaluator Agent", status: "planned" }
+        - { name: "Knowledge Synthesizer Agent", status: "planned" }
+        - { name: "Security Agent", status: "planned" }
+        - { name: "DevOps Agent", status: "planned" }
+    phase_3:
+      name: "Business Automation"
+      timeline: "Weeks 9-12"
+      status: "planned"
+      prd: "docs/planning/prd/PRD-003-BUSINESS-AUTOMATION.md"
+      completion: 0
+      deliverables:
+        - { name: "Workflow Engine (LangGraph)", status: "planned" }
+        - { name: "Customer Onboarding Workflow", status: "planned" }
+        - { name: "Sales Pipeline Automation", status: "planned" }
+        - { name: "Stripe Integration (MCP)", status: "planned" }
+        - { name: "Notion Integration (MCP)", status: "planned" }
+        - { name: "Event Bus (Redis PubSub)", status: "planned" }
+    phase_4:
+      name: "Analytics & Intelligence"
+      timeline: "Weeks 13-16"
+      status: "planned"
+      prd: "docs/planning/prd/PRD-004-ANALYTICS-INTELLIGENCE.md"
+      completion: 0
+      deliverables:
+        - { name: "Analytics Dashboard (Next.js)", status: "planned" }
+        - { name: "Real-time Metrics Pipeline", status: "planned" }
+        - { name: "Business Intelligence Reports", status: "planned" }
+        - { name: "Sales Forecasting Model", status: "planned" }
+        - { name: "Customer Churn Prediction", status: "planned" }
+    phase_5:
+      name: "Scale & Launch"
+      timeline: "Weeks 17-20"
+      status: "planned"
+      prd: "docs/planning/prd/PRD-005-SCALE-LAUNCH.md"
+      completion: 0
+      deliverables:
+        - { name: "Horizontal Pod Autoscaler", status: "planned" }
+        - { name: "Production K8s cluster", status: "planned" }
+        - { name: "SOC 2 Type 1 Audit", status: "planned" }
+        - { name: "GDPR Compliance", status: "planned" }
+        - { name: "User Documentation", status: "planned" }
+        - { name: "Beta Customer Onboarding", status: "planned" }
 
 chunks:
   chunk1:
