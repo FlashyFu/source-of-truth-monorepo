@@ -10,7 +10,7 @@
 
 ## 📦 What You Received
 
-### 1. [HARDENING_SUMMARY.md](computer:///mnt/user-data/outputs/HARDENING_SUMMARY.md) — Executive Brief
+### 1. [HARDENING_SUMMARY.md](HARDENING_SUMMARY.md) — Executive Brief
 - **Purpose**: High-level overview for stakeholders
 - **Size**: ~8KB
 - **Contents**:
@@ -21,7 +21,7 @@
   - Known limitations & mitigations
   - Success metrics (all targets met)
 
-### 2. [DEPLOYMENT_GUIDE.md](computer:///mnt/user-data/outputs/DEPLOYMENT_GUIDE.md) — Implementation Guide
+### 2. [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) — Implementation Guide
 - **Purpose**: Step-by-step deployment instructions
 - **Size**: ~9KB
 - **Contents**:
@@ -32,7 +32,7 @@
   - Testing checklist
   - Incident response quick reference
 
-### 3. [claude-agent-pack-hardened.tar.gz](computer:///mnt/user-data/outputs/claude-agent-pack-hardened.tar.gz) — Agent Pack
+### 3. claude-agent-pack-hardened.tar.gz — Agent Pack
 - **Purpose**: Original agent pack with enhancements
 - **Size**: 47KB compressed
 - **Contents**:
@@ -88,8 +88,8 @@
 ## 🎯 Next Steps
 
 ### Immediate (Day 1)
-1. Read [HARDENING_SUMMARY.md](computer:///mnt/user-data/outputs/HARDENING_SUMMARY.md) for executive overview
-2. Review [DEPLOYMENT_GUIDE.md](computer:///mnt/user-data/outputs/DEPLOYMENT_GUIDE.md) for implementation details
+1. Read [HARDENING_SUMMARY.md](HARDENING_SUMMARY.md) for executive overview
+2. Review [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for implementation details
 3. Extract agent pack: `tar -xzf claude-agent-pack-hardened.tar.gz`
 
 ### Short-Term (Week 1)
@@ -181,9 +181,9 @@ outputs/
 
 ## 🔗 Quick Links
 
-- [Executive Summary](computer:///mnt/user-data/outputs/HARDENING_SUMMARY.md)
-- [Deployment Guide](computer:///mnt/user-data/outputs/DEPLOYMENT_GUIDE.md)
-- [Agent Pack Archive](computer:///mnt/user-data/outputs/claude-agent-pack-hardened.tar.gz)
+- [Executive Summary](HARDENING_SUMMARY.md)
+- [Deployment Guide](DEPLOYMENT_GUIDE.md)
+- Agent Pack Archive (available in project files)
 
 ---
 

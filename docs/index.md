@@ -2,7 +2,7 @@
 
 > Comprehensive documentation for the Source-of-Truth monorepo following the [Diátaxis](https://diataxis.fr/) framework
 
-**Last Updated**: 2025-10-27
+**Last Updated**: 2025-11-27
 **Framework**: Diátaxis
 **Optimization**: LLM-ready (LLMs.txt + MCP)
 
