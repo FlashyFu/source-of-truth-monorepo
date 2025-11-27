@@ -175,3 +175,4 @@ plugins/**/*.log
 plugins/**/.git/
 plugins/**/.gitignore
 
+.pnpm-cache/
