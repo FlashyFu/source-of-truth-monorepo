@@ -27,6 +27,7 @@ storybook-static/
 # Cache directories
 .cache/
 .parcel-cache/
+.pnpm-cache/
 .eslintcache
 .stylelintcache
 .rpt2_cache/
@@ -174,4 +175,3 @@ plugins/**/*.log
 # Claude Code Plugins - Git repositories (already excluded during copy)
 plugins/**/.git/
 plugins/**/.gitignore
-
