@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 1
 
       - name: Run markdownlint (DavidAnson CLI action)
-        uses: DavidAnson/markdownlint-cli2-action@v20
+        uses: DavidAnson/markdownlint-cli2-action@v21
         with:
           globs: |
             **/*.md
