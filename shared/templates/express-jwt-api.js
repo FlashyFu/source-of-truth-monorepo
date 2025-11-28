@@ -33,6 +33,13 @@ const authLimiter = rateLimit({
   message: { error: 'Too many auth attempts, try again later' }
 });
 
+// Rate limiter for API endpoints
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests, try again later' }
+});
+
 app.post('/auth/login', authLimiter, [
   body('email').isEmail(),
   body('password').isString().isLength({ min: 6 })
@@ -66,7 +73,7 @@ function authenticate(req, res, next) {
   });
 }
 
-app.get('/profile', authenticate, (req, res) => {
+app.get('/profile', apiLimiter, authenticate, (req, res) => {
   // Fetch user details
   const user = Object.values(users).find(u => u.id === req.user.sub);
   if(!user) return res.status(404).json({ error: 'User not found' });
