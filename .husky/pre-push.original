@@ -1,0 +1,30 @@
+#!/bin/sh
+# FlashFusion SoT - Pre-push Git Hook
+# Runs before pushing to remote repository
+# Ensures code quality before sharing with team
+
+echo "🔍 Running pre-push checks..."
+
+# Run linting
+echo "  → Linting code..."
+pnpm lint || {
+  echo "❌ Linting failed. Fix errors before pushing."
+  exit 1
+}
+
+# Run type checking
+echo "  → Type checking..."
+pnpm type-check || {
+  echo "❌ Type checking failed. Fix type errors before pushing."
+  exit 1
+}
+
+# Run tests
+echo "  → Running tests..."
+pnpm test || {
+  echo "❌ Tests failed. Fix failing tests before pushing."
+  exit 1
+}
+
+echo "✅ All pre-push checks passed!"
+exit 0
