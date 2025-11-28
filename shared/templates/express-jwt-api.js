@@ -74,12 +74,14 @@ app.get('/profile', authenticate, (req, res) => {
   res.json({ id: user.id, name: user.name, email: req.user.email });
 });
 
-// Simple healthcheck endpoint used by Dockerfile
-module.exports = async function healthcheck() {
-  // Example: return Promise.resolve(); // app is healthy
-  return Promise.resolve();
-};
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 if(require.main === module) {
   app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 }
+
+// Export app for testing
+module.exports = app;

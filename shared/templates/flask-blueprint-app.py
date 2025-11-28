@@ -7,34 +7,7 @@ from flask import Flask, Blueprint, jsonify, request, current_app
 from werkzeug.exceptions import HTTPException
 import os
 
-def create_app(config=None):
-    app = Flask(__name__)
-    # Load default config
-    app.config.from_mapping(
-        SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret'),
-        DATABASE_URL=os.environ.get('DATABASE_URL', 'sqlite:///:memory:'),
-    )
-    if config:
-        app.config.update(config)
-
-    # Register blueprints
-    from auth import auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-
-    from api import api_bp
-    app.register_blueprint(api_bp, url_prefix='/api')
-
-    # Error handling
-    @app.errorhandler(Exception)
-    def handle_error(e):
-        code = 500
-        if isinstance(e, HTTPException):
-            code = e.code
-        current_app.logger.exception(e)
-        return jsonify({'error': str(e)}), code
-
-    return app
-
+# Define blueprints first (before create_app uses them)
 # auth blueprint
 auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/login', methods=['POST'])
@@ -50,6 +23,31 @@ api_bp = Blueprint('api', __name__)
 def profile():
     # For demo: return a static profile
     return jsonify({'id': 1, 'name': 'Demo User'})
+
+def create_app(config=None):
+    app = Flask(__name__)
+    # Load default config
+    app.config.from_mapping(
+        SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret'),
+        DATABASE_URL=os.environ.get('DATABASE_URL', 'sqlite:///:memory:'),
+    )
+    if config:
+        app.config.update(config)
+
+    # Register blueprints (defined above in this module)
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(api_bp, url_prefix='/api')
+
+    # Error handling
+    @app.errorhandler(Exception)
+    def handle_error(e):
+        code = 500
+        if isinstance(e, HTTPException):
+            code = e.code
+        current_app.logger.exception(e)
+        return jsonify({'error': str(e)}), code
+
+    return app
 
 # Migration hook: simple function to be invoked by CI or deploy scripts
 def run_migrations():

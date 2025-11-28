@@ -47,8 +47,8 @@ ENV PORT=3000
 # Expose port
 EXPOSE 3000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD node -e "require('./healthcheck')().then(()=>process.exit(0)).catch(()=>process.exit(1))"
+# Healthcheck - uses wget to check /health endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 # Start command
 CMD ["node", "server.js"]
@@ -56,4 +56,4 @@ CMD ["node", "server.js"]
 # Notes:
 # - Keep build-time secrets out of Docker by using build args or secret mounts.
 # - Consider using distroless or scratch base for even smaller runtime images.
-# - Provide a small healthcheck module at ./healthcheck.js returning a Promise.
+# - Ensure your app has a /health endpoint that returns HTTP 200 when healthy.
