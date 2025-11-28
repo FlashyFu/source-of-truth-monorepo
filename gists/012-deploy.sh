@@ -289,7 +289,7 @@ rollback() {
     
     log_info "Rolling back to: ${backup_file}"
     
-    # Stop current container
+    # Stop and remove current container
     docker stop "${APP_NAME}" 2>/dev/null || true
     docker rm "${APP_NAME}" 2>/dev/null || true
     
@@ -297,9 +297,27 @@ rollback() {
     rm -rf "${DEPLOY_DIR}/current"
     tar -xzf "${backup_file}" -C "${DEPLOY_DIR}"
     
-    # Restart with previous version
+    # Extract previous version from backup filename (e.g., myapp_20240115_093000.tar.gz)
+    local backup_timestamp
+    backup_timestamp=$(basename "${backup_file}" .tar.gz | sed "s/${APP_NAME}_//")
+    
+    # Run container with previous image
     # Note: This assumes the previous Docker image is still available
-    docker start "${APP_NAME}"
+    # For more robust rollback, consider tagging images by version
+    docker run -d \
+        --name "${APP_NAME}" \
+        --restart unless-stopped \
+        -p 3000:3000 \
+        -e NODE_ENV="${ENVIRONMENT:-production}" \
+        --env-file "${DEPLOY_DIR}/.env.${ENVIRONMENT:-production}" \
+        "${APP_NAME}:previous" 2>/dev/null || \
+    docker run -d \
+        --name "${APP_NAME}" \
+        --restart unless-stopped \
+        -p 3000:3000 \
+        -e NODE_ENV="${ENVIRONMENT:-production}" \
+        --env-file "${DEPLOY_DIR}/.env.${ENVIRONMENT:-production}" \
+        "${APP_NAME}:latest"
     
     log_success "Rollback completed"
 }

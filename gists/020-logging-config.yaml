@@ -60,14 +60,17 @@ formatters:
 # ============================================================================
 # Filters (optional)
 # ============================================================================
-filters:
-  # Filter to only show warnings and above
-  warnings_and_above:
-    (): __main__.WarningsAndAboveFilter
-  
-  # Example: Filter to add request_id to all logs
-  # request_id:
-  #   (): myapp.logging.RequestIdFilter
+# Note: Custom filters require Python code to be defined separately.
+# Uncomment and configure the filter class path for your project.
+# 
+# filters:
+#   # Filter to only show warnings and above
+#   warnings_and_above:
+#     (): myapp.logging.filters.WarningsAndAboveFilter
+#   
+#   # Example: Filter to add request_id to all logs
+#   request_id:
+#     (): myapp.logging.filters.RequestIdFilter
 
 # ============================================================================
 # Handlers
