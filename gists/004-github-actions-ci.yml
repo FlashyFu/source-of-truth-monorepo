@@ -1,0 +1,228 @@
+# ============================================================================
+# 004-github-actions-ci.yml
+# CI/CD Workflow for Node.js with tests, Docker build, and semantic-release
+# ============================================================================
+#
+# HOW TO USE:
+#   1. Copy to .github/workflows/ci.yml in your repository
+#   2. Configure repository secrets (see SECRETS section below)
+#   3. Adjust Node version, test commands, and Docker registry as needed
+#
+# SECRETS REQUIRED:
+#   - DOCKER_USERNAME: Docker Hub username
+#   - DOCKER_PASSWORD: Docker Hub access token
+#   - NPM_TOKEN: (Optional) For publishing to npm
+#
+# ============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ==========================================================================
+  # Lint & Type Check
+  # ==========================================================================
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linting
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type-check
+
+  # ==========================================================================
+  # Test
+  # ==========================================================================
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test -- --coverage
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          NODE_ENV: test
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+
+  # ==========================================================================
+  # Build
+  # ==========================================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  # ==========================================================================
+  # Docker Build & Push
+  # ==========================================================================
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================================================
+  # Semantic Release (Optional)
+  # ==========================================================================
+  # release:
+  #   name: Release
+  #   runs-on: ubuntu-latest
+  #   needs: docker
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #         persist-credentials: false
+  #
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #
+  #     - name: Install dependencies
+  #       run: npm ci
+  #
+  #     - name: Semantic Release
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  #       run: npx semantic-release
+
+# ============================================================================
+# NOTES:
+# - Adjust test/build commands for your project
+# - Add environment-specific deployment jobs as needed
+# - Consider adding security scanning (Snyk, CodeQL)
+# - For monorepos, use path filters or affected detection
+# ============================================================================

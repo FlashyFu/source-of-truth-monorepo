@@ -1,0 +1,317 @@
+# ============================================================================
+# 009-k8s-deployment.yaml
+# Kubernetes Deployment + Service + Ingress for stateless applications
+# ============================================================================
+#
+# HOW TO USE:
+#   1. Replace YOUR_APP_NAME and YOUR_IMAGE with your values
+#   2. Create namespace: kubectl create namespace myapp
+#   3. Apply: kubectl apply -f k8s-deployment.yaml -n myapp
+#   4. Check status: kubectl get all -n myapp
+#
+# REQUIREMENTS:
+#   - Kubernetes cluster 1.25+
+#   - Ingress controller installed (nginx-ingress, traefik, etc.)
+#   - cert-manager for TLS (optional but recommended)
+#
+# ============================================================================
+
+---
+# ============================================================================
+# ConfigMap - Application Configuration
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: YOUR_APP_NAME-config
+  labels:
+    app: YOUR_APP_NAME
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  PORT: "3000"
+
+---
+# ============================================================================
+# Secret - Sensitive Configuration (base64 encoded)
+# ============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: YOUR_APP_NAME-secrets
+  labels:
+    app: YOUR_APP_NAME
+type: Opaque
+data:
+  # echo -n 'your-secret-value' | base64
+  DATABASE_PASSWORD: Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=
+  JWT_SECRET: Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=
+# NOTE: In production, use External Secrets Operator or Sealed Secrets
+
+---
+# ============================================================================
+# Deployment
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: YOUR_APP_NAME
+  labels:
+    app: YOUR_APP_NAME
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: YOUR_APP_NAME
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: YOUR_APP_NAME
+      annotations:
+        # Force rollout on config change
+        checksum/config: "{{ include (print $.Template.BasePath \"/configmap.yaml\") . | sha256sum }}"
+    spec:
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      
+      # Service account (create if needed)
+      # serviceAccountName: YOUR_APP_NAME
+      
+      containers:
+        - name: YOUR_APP_NAME
+          image: YOUR_IMAGE:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          
+          # Environment from ConfigMap and Secrets
+          envFrom:
+            - configMapRef:
+                name: YOUR_APP_NAME-config
+          env:
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: YOUR_APP_NAME-secrets
+                  key: DATABASE_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: YOUR_APP_NAME-secrets
+                  key: JWT_SECRET
+          
+          # Resource limits
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          
+          # Liveness probe - is the container alive?
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          # Readiness probe - is the container ready to serve traffic?
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          
+          # Startup probe - for slow starting containers
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 30
+          
+          # Security context for container
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          
+          # Mount tmp directory for apps that need writable space
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      
+      # Spread pods across nodes
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: YOUR_APP_NAME
+      
+      # Pod anti-affinity - don't schedule multiple replicas on same node
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: YOUR_APP_NAME
+                topologyKey: kubernetes.io/hostname
+
+---
+# ============================================================================
+# Service
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: YOUR_APP_NAME
+  labels:
+    app: YOUR_APP_NAME
+spec:
+  type: ClusterIP
+  selector:
+    app: YOUR_APP_NAME
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+
+---
+# ============================================================================
+# Ingress (nginx ingress controller)
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: YOUR_APP_NAME
+  labels:
+    app: YOUR_APP_NAME
+  annotations:
+    # Nginx ingress annotations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/limit-connections: "5"
+    # cert-manager TLS (uncomment if using cert-manager)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - YOUR_DOMAIN.com
+      secretName: YOUR_APP_NAME-tls
+  rules:
+    - host: YOUR_DOMAIN.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: YOUR_APP_NAME
+                port:
+                  number: 80
+
+---
+# ============================================================================
+# HorizontalPodAutoscaler
+# ============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: YOUR_APP_NAME
+  labels:
+    app: YOUR_APP_NAME
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: YOUR_APP_NAME
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+
+---
+# ============================================================================
+# PodDisruptionBudget - Ensure minimum availability during disruptions
+# ============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: YOUR_APP_NAME
+  labels:
+    app: YOUR_APP_NAME
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: YOUR_APP_NAME
+
+# ============================================================================
+# PRODUCTION CHECKLIST:
+# - [ ] Use External Secrets Operator for secrets management
+# - [ ] Set up proper resource requests/limits based on load testing
+# - [ ] Configure network policies for pod-to-pod communication
+# - [ ] Implement proper logging (fluentd, loki)
+# - [ ] Set up monitoring (prometheus, grafana)
+# - [ ] Add ServiceMonitor for Prometheus scraping
+# - [ ] Configure backup strategies for persistent data
+# - [ ] Test disaster recovery scenarios
+# - [ ] Implement GitOps with ArgoCD or Flux
+# ============================================================================

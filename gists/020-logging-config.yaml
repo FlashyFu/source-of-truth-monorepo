@@ -1,0 +1,325 @@
+# ============================================================================
+# 020-logging-config.yaml
+# Structured logging configuration for Python (dictConfig) and tips
+# ============================================================================
+#
+# HOW TO USE:
+#   1. Copy to your project (e.g., logging.yaml or config/logging.yaml)
+#   2. Load in Python:
+#      import yaml
+#      import logging.config
+#      with open('logging.yaml', 'r') as f:
+#          config = yaml.safe_load(f)
+#          logging.config.dictConfig(config)
+#   3. Use: logger = logging.getLogger(__name__)
+#
+# ALTERNATIVES:
+#   - structlog for structured logging
+#   - python-json-logger for JSON output
+#   - loguru for simpler API
+#
+# ============================================================================
+
+version: 1
+disable_existing_loggers: false
+
+# ============================================================================
+# Formatters
+# ============================================================================
+formatters:
+  # Standard text format for development
+  standard:
+    format: "%(asctime)s | %(levelname)-8s | %(name)s:%(lineno)d | %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+  # Detailed format with more context
+  detailed:
+    format: "%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d | %(process)d:%(thread)d | %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+  # Simple format for console
+  simple:
+    format: "%(levelname)-8s | %(message)s"
+
+  # JSON format for production (requires python-json-logger)
+  # Uncomment and install: pip install python-json-logger
+  # json:
+  #   (): pythonjsonlogger.jsonlogger.JsonFormatter
+  #   format: "%(asctime)s %(levelname)s %(name)s %(message)s"
+  #   datefmt: "%Y-%m-%dT%H:%M:%S%z"
+  #   json_indent: null  # null for compact, 2 for pretty
+  #   json_fields:
+  #     timestamp: asctime
+  #     level: levelname
+  #     logger: name
+  #     message: message
+  #     module: module
+  #     function: funcName
+  #     line: lineno
+
+# ============================================================================
+# Filters (optional)
+# ============================================================================
+filters:
+  # Filter to only show warnings and above
+  warnings_and_above:
+    (): __main__.WarningsAndAboveFilter
+  
+  # Example: Filter to add request_id to all logs
+  # request_id:
+  #   (): myapp.logging.RequestIdFilter
+
+# ============================================================================
+# Handlers
+# ============================================================================
+handlers:
+  # Console handler - for development
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: standard
+    stream: ext://sys.stdout
+
+  # Console handler - minimal output
+  console_simple:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+    stream: ext://sys.stdout
+
+  # File handler - rotating logs
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/app.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf-8
+
+  # Error file handler - only errors
+  error_file:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: detailed
+    filename: logs/error.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf-8
+
+  # Timed rotating file handler - daily logs
+  daily_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: detailed
+    filename: logs/daily.log
+    when: midnight
+    interval: 1
+    backupCount: 30  # Keep 30 days
+    encoding: utf-8
+
+  # JSON file handler for production (requires python-json-logger)
+  # json_file:
+  #   class: logging.handlers.RotatingFileHandler
+  #   level: INFO
+  #   formatter: json
+  #   filename: logs/app.json.log
+  #   maxBytes: 10485760
+  #   backupCount: 5
+  #   encoding: utf-8
+
+  # Queue handler for async logging (Python 3.12+)
+  # queue:
+  #   class: logging.handlers.QueueHandler
+  #   queue: myapp.log_queue
+  #   handlers: [file, console]
+
+# ============================================================================
+# Loggers
+# ============================================================================
+loggers:
+  # Application logger
+  myapp:
+    level: DEBUG
+    handlers: [console, file, error_file]
+    propagate: false
+
+  # Specific module loggers
+  myapp.database:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  myapp.api:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  # Third-party loggers - reduce noise
+  urllib3:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+
+  requests:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+
+  sqlalchemy:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+
+  sqlalchemy.engine:
+    level: INFO  # Set to DEBUG to see SQL queries
+    handlers: [console]
+    propagate: false
+
+  # Async libraries
+  asyncio:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+
+  aiohttp:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+
+# ============================================================================
+# Root Logger
+# ============================================================================
+root:
+  level: INFO
+  handlers: [console, file]
+
+# ============================================================================
+# Python Usage Examples
+# ============================================================================
+# 
+# import logging
+# import logging.config
+# import yaml
+# 
+# # Load configuration
+# with open('logging.yaml', 'r') as f:
+#     config = yaml.safe_load(f)
+# logging.config.dictConfig(config)
+# 
+# # Get logger
+# logger = logging.getLogger(__name__)  # Uses module name
+# logger = logging.getLogger('myapp.module')  # Specific logger
+# 
+# # Basic logging
+# logger.debug("Debug message")
+# logger.info("Info message")
+# logger.warning("Warning message")
+# logger.error("Error message")
+# logger.critical("Critical message")
+# 
+# # Logging with context
+# logger.info("User logged in", extra={'user_id': 123, 'ip': '192.168.1.1'})
+# 
+# # Logging exceptions
+# try:
+#     risky_operation()
+# except Exception:
+#     logger.exception("Operation failed")  # Includes traceback
+# 
+# # Structured logging with extra fields
+# logger.info(
+#     "Request processed",
+#     extra={
+#         'request_id': 'abc123',
+#         'duration_ms': 150,
+#         'status_code': 200
+#     }
+# )
+
+# ============================================================================
+# Environment-Specific Configuration
+# ============================================================================
+#
+# Create separate config files:
+#   - logging.dev.yaml (DEBUG level, console)
+#   - logging.prod.yaml (INFO level, JSON, files)
+#   - logging.test.yaml (WARNING level, minimal)
+#
+# Load based on environment:
+#   import os
+#   env = os.getenv('ENVIRONMENT', 'dev')
+#   config_file = f'config/logging.{env}.yaml'
+#
+# ============================================================================
+
+# ============================================================================
+# Custom Filter Example (Python code)
+# ============================================================================
+#
+# class WarningsAndAboveFilter(logging.Filter):
+#     def filter(self, record):
+#         return record.levelno >= logging.WARNING
+#
+# class RequestIdFilter(logging.Filter):
+#     def filter(self, record):
+#         from myapp.context import get_request_id
+#         record.request_id = get_request_id() or 'N/A'
+#         return True
+#
+# class SensitiveDataFilter(logging.Filter):
+#     SENSITIVE_PATTERNS = ['password', 'secret', 'token', 'api_key']
+#     
+#     def filter(self, record):
+#         message = record.getMessage()
+#         for pattern in self.SENSITIVE_PATTERNS:
+#             if pattern in message.lower():
+#                 record.msg = '[REDACTED - contains sensitive data]'
+#                 record.args = ()
+#         return True
+
+# ============================================================================
+# Structlog Configuration (Alternative)
+# ============================================================================
+#
+# pip install structlog
+#
+# import structlog
+#
+# structlog.configure(
+#     processors=[
+#         structlog.stdlib.filter_by_level,
+#         structlog.stdlib.add_logger_name,
+#         structlog.stdlib.add_log_level,
+#         structlog.stdlib.PositionalArgumentsFormatter(),
+#         structlog.processors.TimeStamper(fmt="iso"),
+#         structlog.processors.StackInfoRenderer(),
+#         structlog.processors.format_exc_info,
+#         structlog.processors.UnicodeDecoder(),
+#         structlog.processors.JSONRenderer()  # or ConsoleRenderer()
+#     ],
+#     context_class=dict,
+#     logger_factory=structlog.stdlib.LoggerFactory(),
+#     wrapper_class=structlog.stdlib.BoundLogger,
+#     cache_logger_on_first_use=True,
+# )
+#
+# logger = structlog.get_logger()
+# logger.info("user_logged_in", user_id=123, ip="192.168.1.1")
+
+# ============================================================================
+# Production Best Practices
+# ============================================================================
+#
+# 1. Use structured logging (JSON) for production
+# 2. Include correlation IDs for request tracing
+# 3. Log to files with rotation
+# 4. Use async logging for high-throughput apps
+# 5. Configure log aggregation (ELK, Datadog, etc.)
+# 6. Filter sensitive data before logging
+# 7. Set appropriate log levels per environment
+# 8. Use sampling for very high-volume logs
+# 9. Include context: timestamps, request IDs, user IDs
+# 10. Monitor log volume and storage
+#
+# ============================================================================
