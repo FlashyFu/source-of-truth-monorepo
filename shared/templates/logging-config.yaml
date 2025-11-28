@@ -1,0 +1,42 @@
+# Python dictConfig example for structured JSON logging (compatible with python-json-logger)
+#
+# Usage:
+#   import logging
+#   import logging.config
+#   import yaml
+#   config = yaml.safe_load(open('logging-config.yaml'))
+#   logging.config.dictConfig(config)
+
+version: 1
+disable_existing_loggers: false
+formatters:
+  standard:
+    format: "%(asctime)s %(levelname)s %(name)s %(message)s"
+  json:
+    "()": pythonjsonlogger.jsonlogger.JsonFormatter
+    fmt: "%(asctime)s %(levelname)s %(name)s %(message)s"
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: json
+    stream: ext://sys.stdout
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: standard
+    filename: /var/log/myapp/application.log
+    maxBytes: 10485760
+    backupCount: 5
+loggers:
+  myapp:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+root:
+  level: INFO
+  handlers: [console, file]
+
+# Notes:
+# - Install python-json-logger for JSON formatting: pip install python-json-logger
+# - For structured logs, include request ids and user ids in the log context (use structlog or logging adapters).
