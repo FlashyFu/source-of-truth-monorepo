@@ -1,0 +1,92 @@
+# ============================================================================
+# 002-Dockerfile-node
+# Production-ready Node.js Dockerfile with multi-stage build
+# ============================================================================
+#
+# HOW TO USE:
+#   1. Copy this file to your project root as 'Dockerfile'
+#   2. Adjust NODE_VERSION and build commands as needed
+#   3. Build: docker build -t my-app:latest .
+#   4. Run: docker run -p 3000:3000 my-app:latest
+#
+# SECURITY NOTES:
+#   - Uses non-root user for runtime
+#   - Multi-stage build reduces attack surface
+#   - Only production dependencies in final image
+#   - Alpine-based for minimal footprint
+#
+# ============================================================================
+
+# Build stage
+FROM node:20-alpine AS builder
+
+# Install build dependencies (if needed for native modules)
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copy package files first for better layer caching
+COPY package*.json ./
+COPY pnpm-lock.yaml* ./
+
+# Install dependencies (including devDependencies for build)
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN pnpm run build
+
+# Prune dev dependencies
+RUN pnpm prune --prod
+
+# ============================================================================
+# Production stage
+# ============================================================================
+FROM node:20-alpine AS production
+
+# Security: Create non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+
+WORKDIR /app
+
+# Copy only necessary files from builder
+COPY --from=builder --chown=appuser:appgroup /app/package*.json ./
+COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Switch to non-root user
+USER appuser
+
+# Expose application port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+
+# Start the application
+CMD ["node", "dist/index.js"]
+
+# ============================================================================
+# Alternative: Development stage (uncomment if needed)
+# ============================================================================
+# FROM node:20-alpine AS development
+# 
+# WORKDIR /app
+# 
+# COPY package*.json ./
+# RUN corepack enable pnpm && pnpm install
+# 
+# COPY . .
+# 
+# ENV NODE_ENV=development
+# EXPOSE 3000
+# 
+# CMD ["pnpm", "run", "dev"]
